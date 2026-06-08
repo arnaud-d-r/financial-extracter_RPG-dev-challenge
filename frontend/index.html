@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>shoebox dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Ready Plan Go</p>
+        <h1>Financial extraction dashboard</h1>
+        <p class="lede">A skeleton frontend that reads <code>/api/dashboard</code> and renders your extracted records.</p>
+        <button id="sync-button">Sync shoebox</button>
+      </section>
+
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Summary</h2>
+          <span id="status">Loading...</span>
+        </div>
+        <div class="stats">
+          <article><strong id="record-count">0</strong><span>records</span></article>
+          <article><strong id="warning-count">0</strong><span>warnings</span></article>
+          <article><strong id="source-count">0</strong><span>files</span></article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Records</h2>
+        </div>
+        <div id="records" class="table"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Warnings</h2>
+        </div>
+        <ul id="warnings" class="warnings"></ul>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+pandas
+pdfplumber
+Pillow
+Flask
