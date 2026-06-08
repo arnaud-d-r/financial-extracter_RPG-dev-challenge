@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import main
-from extractors.models import ExpenseRecord, ExtractionResult
+from extractors.models import TransactionCategory, AppDataBundle, Transaction, ExtractionResult
 
 
 class MainPipelineTests(unittest.TestCase):
@@ -21,18 +21,20 @@ class MainPipelineTests(unittest.TestCase):
                     return ExtractionResult(
                         source_file=path.name,
                         records=[
-                            ExpenseRecord(
-                                source="invoice",
+                            Transaction(
+                                source_file=path.name,
+                                category=TransactionCategory.INVOICE,
                                 date=None,
                                 vendor="Netflix",
-                                category="subscription",
+                                description="subscription",
                                 amount=10.0,
                             ),
-                            ExpenseRecord(
-                                source="invoice",
+                            Transaction(
+                                source_file=path.name,
+                                category=TransactionCategory.INVOICE,
                                 date=None,
                                 vendor="Acme Studio",
-                                category="business",
+                                description="business",
                                 amount=99.0,
                             ),
                         ],
@@ -42,8 +44,8 @@ class MainPipelineTests(unittest.TestCase):
             with patch.object(main, "extract_file", side_effect=fake_extract_file):
                 payload = main.generate_app_data(shoebox_dir)
 
-        self.assertEqual(len(payload["records"]), 1)
-        self.assertEqual(payload["records"][0]["vendor"], "Acme Studio")
+        self.assertIsInstance(payload, AppDataBundle)
+        self.assertEqual(len(payload.records), 2)
 
     def test_write_and_read_app_data_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -51,12 +53,16 @@ class MainPipelineTests(unittest.TestCase):
             shoebox_dir = Path(temp_dir) / "shoebox"
             shoebox_dir.mkdir()
 
-            with patch.object(main, "generate_app_data", return_value={"records": [], "warnings": []}) as generate_mock:
+            with patch.object(
+                main,
+                "generate_app_data",
+                return_value=AppDataBundle(source_folder=str(shoebox_dir), records=[], warnings=[]),
+            ) as generate_mock:
                 written_file = main.write_app_data(output_file, shoebox_dir)
 
             self.assertEqual(written_file, output_file)
             self.assertTrue(output_file.exists())
-            self.assertEqual(main.read_app_data(output_file), {"records": [], "warnings": []})
+            self.assertEqual(main.read_app_data(output_file), AppDataBundle(source_folder=str(shoebox_dir), records=[], warnings=[]))
             generate_mock.assert_called_once_with(shoebox_dir)
 
 

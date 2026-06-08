@@ -21,7 +21,7 @@ def create_app() -> Flask:
     def dashboard() -> object:
         if not OUTPUT_FILE.exists():
             return jsonify({"error": "app_data.json not found"}), 404
-        return jsonify(read_app_data(OUTPUT_FILE))
+        return jsonify(read_app_data(OUTPUT_FILE).to_dict())
 
     @app.post("/api/sync")
     def sync() -> object:

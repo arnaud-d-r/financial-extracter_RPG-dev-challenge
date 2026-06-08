@@ -15,17 +15,18 @@ function render() {
     ? `
       <table>
         <thead>
-          <tr><th>Vendor</th><th>Category</th><th>Amount</th><th>Source</th></tr>
+          <tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Source</th></tr>
         </thead>
         <tbody>
           ${state.records
             .map(
               (record) => `
                 <tr>
+                  <td>${record.date ?? "-"}</td>
                   <td>${record.vendor ?? "-"}</td>
                   <td>${record.category ?? "-"}</td>
                   <td>${record.amount ?? 0}</td>
-                  <td>${record.source ?? "-"}</td>
+                  <td>${record.source_file ?? "-"}</td>
                 </tr>
               `,
             )

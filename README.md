@@ -9,13 +9,15 @@ The goal of this tool is first to parse, clean and transform financial data. And
 
 The repo now includes a starter architecture for the extraction pipeline:
 
-- `extractors/parse_invoices.py` for spreadsheet invoices.
-- `extractors/parse_pdf.py` for text-based PDF statements.
+- `extractors/parse_excel.py` for spreadsheet list of invoices.
+- `extractors/parse_pdf.py` for text-based PDF bank statements.
 - `extractors/parse_images.py` for receipt images and OCR fallback wiring.
 - `main.py` as the orchestrator that scans `shoebox/`, filters personal expenses from `notes.txt`, and writes `app_data.json`.
 - `server.py` as a Flask API backend with `GET /api/dashboard` and `POST /api/sync`.
 - `frontend/` as a minimal dashboard shell that consumes the API.
 - `tests/` as a small unittest suite for the data pipeline and API routes.
+
+
 
 ### Run order
 

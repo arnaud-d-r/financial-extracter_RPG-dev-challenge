@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from extractors.models import TransactionCategory
 from extractors.parse_images import parse_images
 
 
@@ -37,8 +38,8 @@ class ParseImagesTests(unittest.TestCase):
 
         self.assertEqual(result.source_file, "receipt.png")
         self.assertEqual(result.records[0].vendor, "receipt")
-        self.assertEqual(result.records[0].metadata, {"size": (640, 480), "mode": "RGB"})
-        self.assertEqual(result.warnings, ["OCR/vLLM integration not wired yet"])
+        self.assertEqual(result.records[0].description, "receipt.png")
+        self.assertEqual(result.records[0].category, TransactionCategory.RECEIPT)
 
     def test_parse_images_reads_real_receipt(self) -> None:
         image_file = REPO_ROOT / "shoebox" / "receipts" / "parking.jpeg"
@@ -47,8 +48,6 @@ class ParseImagesTests(unittest.TestCase):
 
         self.assertEqual(result.source_file, "parking.jpeg")
         self.assertEqual(result.records[0].vendor, "parking")
-        self.assertEqual(result.records[0].metadata["size"], (1408, 768))
-        self.assertEqual(result.records[0].metadata["mode"], "RGB")
 
 
 if __name__ == "__main__":

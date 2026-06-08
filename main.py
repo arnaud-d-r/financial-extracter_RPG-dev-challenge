@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from extractors.models import ExpenseRecord, ExtractionResult
+from extractors.models import AppDataBundle, TransactionCategory, Transaction, ExtractionResult, Warnings
 from extractors.parse_images import parse_images
-from extractors.parse_invoices import parse_invoices
+from extractors.parse_excel import parse_excel
 from extractors.parse_pdf import parse_pdf
 
 
@@ -16,11 +16,21 @@ NOTES_FILE = SHOEBOX_DIR / "notes.txt"
 
 PERSONAL_KEYWORDS = {
     "personal",
-    "netflix",
-    "dog food",
-    "pharmacy",
-    "home office",
+    "bussiness card",
 }
+
+
+def infer_category_from_path(path: Path) -> TransactionCategory:
+    name = path.name.lower()
+    parent = path.parent.name.lower()
+
+    if any(token in name for token in ("invoice", "invoices")):
+        return TransactionCategory.INVOICE
+    if any(token in name for token in ("statement", "bank", "visa", "credit")):
+        return TransactionCategory.BANK_STATEMENT
+    if   "receipt" in parent or "receipt" in name:
+        return TransactionCategory.RECEIPT
+    return TransactionCategory.UNKNOWN
 
 
 def load_personal_exclusions(notes_path: Path = NOTES_FILE) -> set[str]:
@@ -38,26 +48,26 @@ def load_personal_exclusions(notes_path: Path = NOTES_FILE) -> set[str]:
     return clues
 
 
-def is_personal_expense(record: ExpenseRecord, personal_clues: set[str]) -> bool:
-    haystack = f"{record.vendor} {record.category} {record.source}".lower()
+def is_personal_expense(record: Transaction, personal_clues: set[str]) -> bool:
+    haystack = f"{record.vendor or ''} {record.description or ''} {record.category.value}".lower()
     return any(clue in haystack for clue in personal_clues)
 
 
 def extract_file(path: Path) -> ExtractionResult:
+    category = infer_category_from_path(path)
     suffix = path.suffix.lower()
     if suffix == ".xlsx":
-        return parse_invoices(path)
+        return parse_excel(path, category=category)
     if suffix == ".pdf":
-        return parse_pdf(path)
+        return parse_pdf(path, category=category)
     if suffix in {".png", ".jpg", ".jpeg", ".webp"}:
-        return parse_images(path)
-    return ExtractionResult(source_file=path.name, records=[], warnings=["Unsupported file type"])
+        return parse_images(path, category=category)
+    return ExtractionResult(source_file=path.name, records=[])
 
 
-def build_app_data(shoebox_dir: Path = SHOEBOX_DIR) -> dict:
+def build_app_data(shoebox_dir: Path = SHOEBOX_DIR) -> AppDataBundle:
     personal_clues = load_personal_exclusions(shoebox_dir / "notes.txt")
-    items: list[dict] = []
-    warnings: list[str] = []
+    records: list[Transaction] = []
 
     for path in sorted(shoebox_dir.rglob("*")):
         if not path.is_file():
@@ -66,32 +76,24 @@ def build_app_data(shoebox_dir: Path = SHOEBOX_DIR) -> dict:
             continue
 
         extraction = extract_file(path)
-        warnings.extend(extraction.warnings)
 
         for record in extraction.records:
             if is_personal_expense(record, personal_clues):
-                continue
-            items.append(record.to_dict())
+                record.warnings.append(Warnings.PERSONAL_EXPENSE)
+            records.append(record)
 
-    return {
-        "source_folder": str(shoebox_dir),
-        "records": items,
-        "warnings": warnings,
-    }
+    return AppDataBundle(source_folder=str(shoebox_dir), records=records)
 
-
-def generate_app_data(shoebox_dir: Path = SHOEBOX_DIR) -> dict:
-    return build_app_data(shoebox_dir)
 
 
 def write_app_data(output_file: Path = OUTPUT_FILE, shoebox_dir: Path = SHOEBOX_DIR) -> Path:
-    payload = generate_app_data(shoebox_dir)
-    output_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    payload = build_app_data(shoebox_dir)
+    output_file.write_text(json.dumps(payload.to_dict(), indent=2), encoding="utf-8")
     return output_file
 
 
-def read_app_data(input_file: Path = OUTPUT_FILE) -> dict:
-    return json.loads(input_file.read_text(encoding="utf-8"))
+def read_app_data(input_file: Path = OUTPUT_FILE) -> AppDataBundle:
+    return AppDataBundle.model_validate_json(input_file.read_text(encoding="utf-8"))
 
 
 def main() -> None:
