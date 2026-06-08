@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .models import ExpenseRecord, ExtractionResult
+from .models import  Transaction, ExtractionResult, TransactionCategory
 
 
-def parse_images(path: str | Path) -> ExtractionResult:
+def parse_images(path: str | Path, category: TransactionCategory = TransactionCategory.RECEIPT) -> ExtractionResult:
     image_path = Path(path)
     try:
         from PIL import Image
@@ -18,14 +18,14 @@ def parse_images(path: str | Path) -> ExtractionResult:
     return ExtractionResult(
         source_file=image_path.name,
         records=[
-            ExpenseRecord(
-                source="image",
-                date=None,
+            Transaction(
+                source_file=image_path.name,
+                category=category,
                 vendor=image_path.stem,
-                category="receipt",
-                amount=0.0,
-                metadata=metadata,
+                description=image_path.name,
+                date=None,
+                amount=None,
+                warnings=[],
             )
-        ],
-        warnings=["OCR/vLLM integration not wired yet"],
+        ]
     )
