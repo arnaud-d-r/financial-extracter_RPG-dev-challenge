@@ -19,7 +19,7 @@ ColumnMatching: dict[str, list[str]] = {
     "description": ("description", "details", "line item"),
     "amount": ("amount", "total", "value", "price"),
     "date": ("date", "date sent", "statement date"),
-    "invoice_paid_date": ("date paid", "payment date", "paid date")
+    "invoice_paid_date": ("date paid", "payment date", "paid date", "billing date")
 }
     
 class PaymentMethod(Enum):
@@ -59,7 +59,7 @@ class Transaction(BaseModel):
     def validate_record(self) -> "Transaction":
         issues = list(dict.fromkeys(self.warnings))
 
-        if not self.vendor or not self.vendor.strip():
+        if not self.vendor or not self.vendor.strip() or self.vendor == None:
             issues.append(Warnings.INVALID_VENDOR)
         if self.amount is None:
             issues.append(Warnings.INVALID_AMOUNT)
