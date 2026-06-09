@@ -4,3 +4,6 @@ Pillow
 Flask
 pydantic
 openpyxl
+outlines
+transformers
+accelerate

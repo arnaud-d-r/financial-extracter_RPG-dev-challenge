@@ -1,6 +1,7 @@
 import datetime
 from pathlib import Path
 import re
+from typing import Any
 import pandas as pd
 
 YEAR_PATTERN = re.compile(r"\b(19|20)\d{2}\b")
@@ -12,6 +13,14 @@ def _parse_statement_year(line: str) -> int | None:
     match = YEAR_PATTERN.search(line)
     return int(match.group(0)) if match else None
 
+def _is_empty(val : Any) -> bool:
+    if val is None:
+        return True
+    if isinstance(val, float) and pd.isna(val):  
+        return True
+    if pd.isna(val): 
+        return True
+    return False
 
 def _normalise_row(row: object) -> dict[str, object]:
     return {str(key).strip().lower(): value for key, value in row.items()}

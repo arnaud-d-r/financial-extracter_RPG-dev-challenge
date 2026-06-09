@@ -106,7 +106,6 @@ class AppDataBundle(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     records: list[Transaction]
-    warnings: list[Warnings] = Field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(mode="json")

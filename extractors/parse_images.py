@@ -139,31 +139,47 @@ def parse_images(path: str | Path, category: TransactionCategory = TransactionCa
             records=[clean_and_validate_raw_output(raw_output, image_path.name)]
         )
         
-
-
 def clean_and_validate_raw_output(raw_output_str: str, image_name: str) -> Transaction:  
+    fallback_tx = Transaction(
+        source_file=image_name,
+        category=TransactionCategory.UNKNOWN,
+        vendor=None,
+        description=None,
+        date=None,
+        amount=None,
+        payment_method=PaymentMethod.UNKNOWN,
+        warnings=[]
+    )
+
     clean_str = raw_output_str.replace("```json", "").replace("```", "").strip()
     try:
         data = json.loads(clean_str)
-    except json.JSONDecodeError:
-        return Transaction(
-            source_file=image_name,
-            category=TransactionCategory.UNKNOWN,
-            vendor=None,
-            description=None,
-            date=None,
-            amount=None,
-            payment_method=PaymentMethod.UNKNOWN,
-        )
+        if not isinstance(data, dict):
+            return fallback_tx
+    except (json.JSONDecodeError, TypeError):
+        return fallback_tx
     
+    raw_cat = str(data.get("category", ""))
+    try:
+        category = TransactionCategory(raw_cat.strip().lower())
+    except ValueError:
+        category = TransactionCategory.UNKNOWN
+
+    vendor = str(data.get("vendor")) if data.get("vendor") is not None else None
+    description = str(data.get("description")) if data.get("description") is not None else None
+
+
     raw_amount = data.get("total")
     clean_amount = None
     if raw_amount is not None:
         amount_match = re.search(r"[-+]?\d*\.\d+|\d+", str(raw_amount))
         if amount_match:
-            clean_amount = float(amount_match.group())
+            try:
+                clean_amount = float(amount_match.group())
+            except ValueError:
+                clean_amount = None
 
-    raw_payment = str(data.get("payment_method", "")).lower()
+    raw_payment = str(data.get("payment_method") or "").lower()
     if "transfer" in raw_payment or "virement" in raw_payment:
         payment_method = PaymentMethod.E_TRANSFER
     elif "credit" in raw_payment or "carte" in raw_payment or "cb" in raw_payment:
@@ -173,21 +189,29 @@ def clean_and_validate_raw_output(raw_output_str: str, image_name: str) -> Trans
     else:
         payment_method = PaymentMethod.UNKNOWN
 
+
     raw_date = data.get("date")
     formatted_date = None
-    if raw_date and raw_date != "null":
-        try:
-            formatted_date = datetime.datetime.strptime(raw_date.split(' ')[0], "%d/%m/%Y").date()
-        except ValueError:
-            pass
+    if raw_date and str(raw_date).lower() != "null":
+        date_str = str(raw_date).strip()
+        parts = date_str.split(' ')
+        if parts and parts[0]:
+            try:
+                formatted_date = datetime.datetime.strptime(parts[0], "%d/%m/%Y").date()
+            except ValueError:
+                formatted_date = None
 
-    return Transaction(
-        source_file=image_name,
-        category=data.get("category", TransactionCategory.UNKNOWN).lower(),
-        vendor=data.get("vendor"),
-        description=data.get("description"),
-        date=formatted_date,
-        amount=clean_amount,
-        payment_method=payment_method,
-        warnings=[]
-    )
+    try:
+        return Transaction(
+            source_file=image_name,
+            category=category,
+            vendor=vendor,
+            description=description,
+            date=formatted_date,
+            amount=clean_amount,
+            payment_method=payment_method,
+            warnings=[]
+        )
+    except Exception:
+        return fallback_tx
+

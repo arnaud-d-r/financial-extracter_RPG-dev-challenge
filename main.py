@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 from pathlib import Path
 
@@ -14,10 +15,6 @@ SHOEBOX_DIR = ROOT / "shoebox"
 OUTPUT_FILE = ROOT / "app_data.json"
 NOTES_FILE = SHOEBOX_DIR / "notes.txt"
 
-PERSONAL_KEYWORDS = {
-    "personal",
-    "bussiness card",
-}
 
 
 def infer_category_from_path(path: Path) -> TransactionCategory:
@@ -33,25 +30,6 @@ def infer_category_from_path(path: Path) -> TransactionCategory:
     return TransactionCategory.UNKNOWN
 
 
-def load_personal_exclusions(notes_path: Path = NOTES_FILE) -> set[str]:
-    if not notes_path.exists():
-        return set()
-
-    clues: set[str] = set()
-    for raw_line in notes_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip().lower()
-        if not line or line.startswith("["):
-            continue
-        for keyword in PERSONAL_KEYWORDS:
-            if keyword in line:
-                clues.add(keyword)
-    return clues
-
-
-def is_personal_expense(record: Transaction, personal_clues: set[str]) -> bool:
-    haystack = f"{record.vendor or ''} {record.description or ''} {record.category.value}".lower()
-    return any(clue in haystack for clue in personal_clues)
-
 
 def extract_file(path: Path) -> ExtractionResult:
     category = infer_category_from_path(path)
@@ -66,7 +44,6 @@ def extract_file(path: Path) -> ExtractionResult:
 
 
 def build_app_data(shoebox_dir: Path = SHOEBOX_DIR) -> AppDataBundle:
-    personal_clues = load_personal_exclusions(shoebox_dir / "notes.txt")
     records: list[Transaction] = []
 
     for path in sorted(shoebox_dir.rglob("*")):
@@ -78,26 +55,47 @@ def build_app_data(shoebox_dir: Path = SHOEBOX_DIR) -> AppDataBundle:
         extraction = extract_file(path)
 
         for record in extraction.records:
-            if is_personal_expense(record, personal_clues):
-                record.warnings.append(Warnings.PERSONAL_EXPENSE)
             records.append(record)
 
-    return AppDataBundle(source_folder=str(shoebox_dir), records=records)
+    return AppDataBundle( records=records)
 
 
 
-def write_app_data(output_file: Path = OUTPUT_FILE, shoebox_dir: Path = SHOEBOX_DIR) -> Path:
-    payload = build_app_data(shoebox_dir)
-    output_file.write_text(json.dumps(payload.to_dict(), indent=2), encoding="utf-8")
-    return output_file
+def write_app_data( data: AppDataBundle, output_file: Path = OUTPUT_FILE) -> Path:
+    output_file.write_text(json.dumps(data.to_dict(), indent=2), encoding="utf-8")
 
 
 def read_app_data(input_file: Path = OUTPUT_FILE) -> AppDataBundle:
     return AppDataBundle.model_validate_json(input_file.read_text(encoding="utf-8"))
 
+def patch_app_data(matching_trouple: tuple[str, datetime.date, float], warning_key: str) -> bool:
+    data = read_app_data()
+    matched = False
+    warning = Warnings(warning_key)
+    for record in data.records:
+        if (
+            record.source_file == matching_trouple[0]
+            and record.date == matching_trouple[1]
+            and record.amount == matching_trouple[2]
+        ):
+            matched = True
+            if warning in record.warnings:
+                record.warnings.remove(warning)
+            else:
+                return False
+    if not matched:
+        return False
+    try:
+        write_app_data(data=data)
+    except Exception as e:
+        print(f"Error writing app data: {e}")
+        return False
+    return True
+
 
 def main() -> None:
-    write_app_data()
+    data=build_app_data()
+    write_app_data(data=data)
 
 
 if __name__ == "__main__":

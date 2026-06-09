@@ -4,7 +4,7 @@ import datetime
 import re
 from pathlib import Path
 
-from .models import ExtractionResult, Transaction, TransactionCategory, Warnings
+from .models import ExtractionResult, PaymentMethod, Transaction, TransactionCategory, Warnings
 from .utils import _coerce_amount, _normalise_line, _parse_statement_year
 
 import pdfplumber
@@ -59,7 +59,7 @@ def parse_pdf(
                             match.group("month"), match.group("day"), statement_year
                         ),
                         amount=_coerce_amount(match.group("amount")),
-                        warnings=[],
+                        payment_method=PaymentMethod.CREDIT_CARD
                     )
                 )
 
