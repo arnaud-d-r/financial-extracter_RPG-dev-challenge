@@ -25,6 +25,7 @@ ColumnMatching: dict[str, list[str]] = {
 class PaymentMethod(Enum):
     CREDIT_CARD = "credit_card"
     CASH = "cash"
+    E_TRANSFER = "electronic_transfer"
     UNKNOWN = "unknown"
     
 class Warnings(Enum):
@@ -32,10 +33,10 @@ class Warnings(Enum):
     INVALID_VENDOR = "invalid_vendor"
     INVALID_DATE = "invalid_date"
     INVALID_CATEGORY = "invalid_category"
+    INVALID_INVOICE_PAID_DATE = "invalid_invoice_paid_date"
     FUTURE_DATE = "future_date"
     PAID_BEFORE_SENT = "paid_before_sent"
     PERSONAL_EXPENSE = "personal_expense"
-    INVALID_INVOICE_PAID_DATE = "invalid_invoice_paid_date"
     UNPAID_INVOICE = "unpaid_invoice"
     NOT_CASH_RECEIPT = "not_cash_receipt"
     NEGATIVE_AMOUNT = "negative_amount"
@@ -104,7 +105,6 @@ class ExtractionResult(BaseModel):
 class AppDataBundle(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    source_folder: str
     records: list[Transaction]
     warnings: list[Warnings] = Field(default_factory=list)
 
